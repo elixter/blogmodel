@@ -337,5 +337,3 @@ func (p *Post) DeletePost(db *sql.DB) error {
 	
 	return nil
 }
-
-

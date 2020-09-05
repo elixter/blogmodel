@@ -26,32 +26,32 @@ func (u *User) Valid() bool {
 	return u.ExpiresAt.Sub(time.Now()) > 0
 }
 
-func (u *User) Check(driver *sql.DB, check ... string) bool {
+func (u *User) Check(db *sql.DB, check ... string) bool {
 	// 데이터베이스에 유저 세션이 존재하는지 확인하는 함수
 	// 세션아이디 또는 유저아이디로 확인
 	// check == "ID" - 유저 아이디로 확인
 	// check == "SESSIONS" - 세션 아이디로 확인
 	// Default check = "ID"
-	var sessCheck int
+	var valid int
 	
 	switch check[0] {
 		case "ID":
-			err := driver.QueryRow("select count(id) from sessions where uid = ?", u.Id).Scan(&sessCheck)
+			err := db.QueryRow("select count(id) from sessions where uid = ?", u.Id).Scan(&valid)
 			if err != nil {
 				log.Println(err)
 			}
 		case "SESSIONS":
-			err := driver.QueryRow("select count(id) from sessions where id = ?", u.SessionId).Scan(&sessCheck)
+			err := db.QueryRow("select count(id) from sessions where id = ?", u.SessionId).Scan(&valid)
 			if err != nil {
 				log.Println(err)
 			}
 		default:
-			err := driver.QueryRow("select count(id) from sessions where uid = ?", u.Id).Scan(&sessCheck)
+			err := db.QueryRow("select count(id) from sessions where uid = ?", u.Id).Scan(&valid)
 			if err != nil {
 				log.Println(err)
 			}
 	}
-	if (sessCheck != 0) {
+	if (valid != 0) {
 		return true
 	} else {
 		return false
@@ -75,25 +75,23 @@ func GetUser(session *sessions.Session, userKey string) (*User, error) {
 		err = json.Unmarshal(jUser.([]byte), &u)
 		if err != nil {
 			log.Println(err)
+			return nil, err
 		}
+	} else {
+		// 유저 정보가 없을 경우 nil반환
+		return nil, nil
 	}
 	
 	return u, err
 }
 
 func (u *User) GetAdmin(db *sql.DB, session *sessions.Session, userKey string) int {
-	if session.Values[userKey] != nil {
-		// Database에서 유저세션 정보 확인
-		if u.Check(db, "ID") {
-			if u.Valid() {
-				return 1
-			}
-		} else {
-			return 0
-		}
-	} else {
+	u, err := GetUser(session, userKey)
+	if err != nil || u == nil {
+		// If get error while GetUser or User information is not exist in session cookie return -1
+		log.Println(err)
 		return -1
 	}
-	// 세션에 유저정보가 없으면 -1 반환
-	return -1
+	
+	return u.Admin
 }
