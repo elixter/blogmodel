@@ -18,6 +18,26 @@ type User struct {
 	ExpiresAt	time.Time	`json: "expiresAt"`							// 세션 만료시간
 }
 
+func GetUser(session *sessions.Session, userKey string) (*User, error) {
+	var err error
+	u := new(User)
+	
+	// 세션에서 유저정보 가져오기.
+	jUser := session.Values[userKey]
+	if jUser != nil {
+		err = json.Unmarshal(jUser.([]byte), &u)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+	} else {
+		// 유저 정보가 없을 경우 nil반환
+		return nil, nil
+	}
+	
+	return u, err
+}
+
 func (u *User) Valid() bool {
 	// Check user's session is valid
 	log.Println(time.Now())
@@ -63,35 +83,4 @@ func (u *User) Refresh() time.Time {
 	u.ExpiresAt = u.ExpiresAt.Add(time.Minute * 30)
 	
 	return u.ExpiresAt
-}
-
-func GetUser(session *sessions.Session, userKey string) (*User, error) {
-	var err error
-	u := new(User)
-	
-	// 세션에서 유저정보 가져오기.
-	jUser := session.Values[userKey]
-	if jUser != nil {
-		err = json.Unmarshal(jUser.([]byte), &u)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-	} else {
-		// 유저 정보가 없을 경우 nil반환
-		return nil, nil
-	}
-	
-	return u, err
-}
-
-func (u *User) GetAdmin(db *sql.DB, session *sessions.Session, userKey string) int {
-	u, err := GetUser(session, userKey)
-	if err != nil || u == nil {
-		// If get error while GetUser or User information is not exist in session cookie return -1
-		log.Println(err)
-		return -1
-	}
-	
-	return u.Admin
 }
