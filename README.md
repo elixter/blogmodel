@@ -1,2 +1,11 @@
-# blogmodel
-블로그 모델 모듈화 테스트
+blogmodel
+=========
+
+* download
+<pre>
+<code>
+go get github.com/elixter/blogmodel
+</code>
+</pre>
+
+* 현재 post, user모델만 구현
